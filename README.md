@@ -1,118 +1,290 @@
-<p align="center" class="flex items-center gap-1 justify-center flex-wrap">
-    <img src="../../assets/gcp-logo.svg?raw=true" alt="GCP Logo" height="20" width="20">
-    <a href="https://pathway.com/developers/user-guide/deployment/gcp-deploy">Deploy with GCP</a> |
-    <img src="../../assets/aws-fargate-logo.svg?raw=true" alt="AWS Logo" height="20" width="20">
-    <a href="https://pathway.com/developers/user-guide/deployment/aws-fargate-deploy">Deploy with AWS</a> |
-    <img src="../../assets/azure-logo.svg?raw=true" alt="Azure Logo" height="20" width="20">
-    <a href="https://pathway.com/developers/user-guide/deployment/azure-aci-deploy">Deploy with Azure</a> |
-    <img src="../../assets/render.png?raw=true" alt="Render Logo" height="20" width="20">
-    <a href="https://pathway.com/developers/user-guide/deployment/render-deploy"> Deploy with Render </a>
-</p>
+# 🎥 VideoMind — Multimodal Video RAG System
 
-# Video RAG with Pathway Live Data Framework and TwelveLabs
+### Don't rewatch it. Ask it.
 
-## Overview
+**An AI Video Retrieval-Augmented Generation (RAG) system that transforms video content into an interactive, searchable knowledge source.**
 
-This app template shows how to build a RAG application **over video** using the
-Pathway Live Data Framework together with [TwelveLabs](https://twelvelabs.io).
+VideoMind is a multimodal RAG application built to make long-form video content accessible through natural-language conversations. Users can upload local videos or provide YouTube URLs, allowing the system to process video content, retrieve relevant contextual information, and generate answers to questions using Large Language Models.
 
-Videos are notoriously hard to put into a RAG pipeline: most stacks first
-transcribe the audio and throw away everything that happens on screen. This
-template indexes the *whole* video instead, using two TwelveLabs models:
+The system integrates **TwelveLabs for video understanding and multimodal embeddings, Pathway for the retrieval pipeline, and Groq for LLM inference**, with a Streamlit interface for user interaction.
 
-- **[Pegasus](https://docs.twelvelabs.io/docs/concepts/models/pegasus)** — a
-  video-understanding model that turns each video into a rich text description
-  (what happens, who and what appears, the setting, on-screen and spoken text,
-  the overall topic). Pathway indexes that text exactly like it would index a PDF.
-- **[Marengo](https://docs.twelvelabs.io/docs/concepts/models/marengo)** — a
-  multimodal embedding model that produces 512-dimensional vectors in a shared
-  space for text, image, audio and video. It is used here as the retriever
-  embedder.
+---
 
-Because the template uses the standard Pathway `DocumentStore` and
-`BaseRAGQuestionAnswerer`, everything else works out of the box: live sync with
-your data source, the in-memory vector index, caching, and the HTTP API. Drop a
-new video into the connected folder and it becomes queryable automatically.
+## 📸 Application Preview
 
-## Architecture
+### Landing Page
 
+Upload a video or provide a YouTube URL to create a searchable source of video knowledge.
+
+![VideoMind Landing Page](screenshots/landing_page.png)
+
+### Interactive Video Question Answering
+
+Ask questions about the video, retrieve relevant context, and continue the conversation through an interactive chat interface.
+
+![VideoMind Chat Interface](screenshots/chat_interface.png)
+
+---
+
+## ✨ Core Features
+
+- **Multimodal Video RAG:** Built a retrieval-augmented generation pipeline to interact with video content using natural-language queries.
+- **Video Understanding:** Integrated TwelveLabs Pegasus for video analysis and Marengo for multimodal embedding generation.
+- **Semantic Retrieval:** Retrieve relevant video information based on query meaning and contextual similarity.
+- **YouTube Video Ingestion:** Accept YouTube URLs as an alternative to local video uploads.
+- **Video Preprocessing:** Integrated FFmpeg for video normalization, frame-rate reduction, and format compatibility.
+- **Context-Aware Question Answering:** Combine retrieved video context with Groq-powered LLM inference to generate relevant responses.
+- **Conversational Interface:** Built an interactive Streamlit chat interface supporting follow-up questions.
+- **Backend Containerization:** Used Docker to package and run the Pathway backend independently of the frontend.
+
+---
+
+## 🏗️ System Architecture
+
+VideoMind follows a modular architecture separating video ingestion, multimodal processing, retrieval, and answer generation.
+
+```mermaid
+flowchart TD
+    A[User] --> B[Streamlit Frontend]
+    B --> C{Video Input}
+    C --> D[Local Upload]
+    C --> E[YouTube URL]
+    D --> F[FFmpeg Preprocessing]
+    E --> G[yt-dlp Download]
+    G --> F
+    F --> H[TwelveLabs Video Processing]
+    H --> I[Marengo Multimodal Embeddings]
+    H --> J[Pegasus Video Understanding]
+    I --> K[Pathway Retrieval Pipeline]
+    J --> K
+    L[User Query] --> M[Query Processing]
+    M --> K
+    K --> N[Relevant Retrieved Context]
+    N --> O[Groq LLM Inference]
+    O --> P[Generated Answer]
+    P --> B
 ```
-video files ─▶ pw.io.fs.read (bytes)
-            ─▶ TwelveLabsVideoParser  (Pegasus: video → text)
-            ─▶ TokenCountSplitter      (chunking)
-            ─▶ DocumentStore + UsearchKnnFactory
-                 with MarengoEmbedder  (text → 512-dim vectors)
-            ─▶ BaseRAGQuestionAnswerer  (OpenAI LLM over retrieved context)
-            ─▶ REST API on :8000
+
+---
+
+## 🔍 RAG Pipeline — How VideoMind Works
+
+### 1. Video Ingestion
+
+The application accepts video input through:
+- Local video uploads.
+- YouTube video URLs.
+
+For YouTube videos, `yt-dlp` handles video downloading.
+
+### 2. Video Preprocessing
+
+FFmpeg prepares videos for downstream processing by:
+- Normalizing video formats.
+- Standardizing frame rates and resolution.
+- Processing audio streams.
+- Improving compatibility with the video understanding pipeline.
+
+### 3. Multimodal Video Understanding
+
+TwelveLabs models power the video intelligence layer:
+
+- **Pegasus:** Video understanding and content analysis.
+- **Marengo:** Multimodal video embedding generation.
+
+This layer enables the application to work with information contained in video content rather than treating videos as ordinary text documents.
+
+### 4. Indexing and Retrieval
+
+Pathway manages the backend processing and retrieval pipeline.
+
+The processed video representations are made available for retrieval so that user questions can be matched against relevant video context.
+
+### 5. Query Processing
+
+Users submit natural-language questions through the Streamlit chat interface.
+
+The backend processes the query and retrieves context relevant to the requested information.
+
+### 6. Contextual Answer Generation
+
+The retrieved context is passed to the Groq-hosted LLM, which generates a response grounded in the available video information.
+
+### 7. Interactive Conversation
+
+The generated response is returned to the frontend, where users can ask further questions and explore the video's content conversationally.
+
+---
+
+## 🛠️ Tech Stack & Concepts
+
+| Category | Technologies |
+|---|---|
+| Programming Language | Python |
+| Frontend | Streamlit |
+| Backend | Pathway |
+| RAG Architecture | Retrieval-Augmented Generation |
+| Video Understanding | TwelveLabs Pegasus |
+| Multimodal Embeddings | TwelveLabs Marengo |
+| LLM Inference | Groq |
+| Video Processing | FFmpeg |
+| YouTube Ingestion | yt-dlp |
+| Containerization | Docker |
+| API Communication | HTTP / REST |
+
+### Technical Concepts Implemented
+
+- Retrieval-Augmented Generation (RAG)
+- Multimodal AI and Video Understanding
+- Semantic Search and Embeddings
+- Context Retrieval and LLM Grounding
+- Video Ingestion and Preprocessing
+- Modular Backend Architecture
+- API Integration and Containerization
+
+---
+
+## 📁 Project Structure
+
+```text
+VideoMind/
+│
+├── streamlit_app.py
+├── streamlit_app_old.py
+│
+├── app.py
+├── app.yaml
+│
+├── Dockerfile
+│
+├── requirements.txt
+├── requirements-streamlit.txt
+│
+├── screenshots/
+│   ├── landing_page.png
+│   └── chat_interface.png
+│
+├── .env.example
+├── .gitignore
+│
+└── README.md
 ```
 
-The TwelveLabs components are part of the Pathway LLM xpack:
+---
 
-- [`TwelveLabsVideoParser`](https://pathway.com/developers/api-docs/pathway-xpacks-llm/parsers#pathway.xpacks.llm.parsers.TwelveLabsVideoParser)
-  — a Pathway parser that uploads the video bytes as a TwelveLabs asset and asks
-  Pegasus to describe it.
-- [`MarengoEmbedder`](https://pathway.com/developers/api-docs/pathway-xpacks-llm/embedders#pathway.xpacks.llm.embedders.MarengoEmbedder)
-  — a Pathway embedder that calls the Marengo embedding endpoint.
-
-Both are wired in entirely through [`app.yaml`](app.yaml), so you can swap models,
-prompts, the data source, or the LLM without touching any Python.
-
-## Customizing the pipeline
-
-- **Change what is extracted from the video.** Set the `prompt` field of
-  `$parser` in `app.yaml`, e.g. `"Describe this video, focusing on the products
-  that appear and any prices shown."`
-- **Change the data source.** Replace the `!pw.io.fs.read` source with the Google
-  Drive, SharePoint, or S3 connector (a commented Google Drive example is
-  included in `app.yaml`).
-- **Change the answering LLM.** Edit the `$llm` block — any
-  [Pathway LLM wrapper](https://pathway.com/developers/api-docs/pathway-xpacks-llm/llms)
-  works.
-
-## Running the app
+## ⚙️ Local Setup
 
 ### Prerequisites
 
-- A TwelveLabs API key. Get a free one at [twelvelabs.io](https://twelvelabs.io) —
-  there is a generous free tier.
-- An OpenAI API key for the question-answering LLM.
-- A Pathway license key, required by the `TwelveLabsVideoParser`. Get a free one
-  at [pathway.com/features](https://pathway.com/features).
+- Python
+- Docker Desktop
+- FFmpeg
+- Git
+- TwelveLabs API key
+- Pathway license key
+- Groq API key
 
-Copy `.env.example` to `.env` and fill in your keys:
-
-```bash
-cp .env .env
-# edit .env and set TWELVELABS_API_KEY, OPENAI_API_KEY and PATHWAY_LICENSE_KEY
-```
-
-Put one or more videos (e.g. `.mp4`, `.mov`) into the `data/` directory.
-
-### With Docker
+### 1. Clone the repository
 
 ```bash
-docker build -t video-rag-twelvelabs .
-docker run -v $(pwd)/data:/app/data --env-file .env -p 8000:8000 video-rag-twelvelabs
+git clone https://github.com/Harshit-0021/VideoMind.git
+cd VideoMind
 ```
 
-### Locally
+### 2. Create a virtual environment
 
 ```bash
-pip install -r requirements.txt
-python app.py
+python -m venv .venv
 ```
 
-### Querying
+Activate on Windows:
 
-Once the server is up, ask questions about your videos:
+```powershell
+.venv\Scripts\activate
+```
+
+### 3. Install frontend dependencies
 
 ```bash
-curl -X POST http://localhost:8000/v1/pw_ai_answer \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What products are shown in the videos?"}'
+pip install -r requirements-streamlit.txt
 ```
 
-## Tests
+### 4. Configure environment variables
 
-The TwelveLabs components are tested as part of the Pathway core test suite, in
-[`python/pathway/xpacks/llm/tests/test_twelvelabs.py`](https://github.com/pathwaycom/pathway/blob/main/python/pathway/xpacks/llm/tests/test_twelvelabs.py).
+Create a `.env` file using `.env.example`:
+
+```env
+TWELVELABS_API_KEY=your_api_key
+PATHWAY_LICENSE_KEY=your_license_key
+GROQ_API_KEY=your_api_key
+```
+
+Never commit API keys or your `.env` file to GitHub.
+
+### 5. Build the backend Docker image
+
+```bash
+docker build -t videomind .
+```
+
+### 6. Start the backend
+
+PowerShell:
+
+```powershell
+docker run --rm `
+  -v "${PWD}/data:/app/data" `
+  --env-file .env `
+  -p 8000:8000 `
+  videomind
+```
+
+### 7. Launch the frontend
+
+Open another terminal:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Open the application at:
+
+`http://localhost:8501`
+
+---
+
+## 🚀 Deployment
+
+The application uses a decoupled frontend and backend architecture.
+
+| Component | Hosting |
+|---|---|
+| Frontend | Streamlit Community Cloud |
+| Backend | Docker-compatible cloud hosting |
+| Video Processing | TwelveLabs API |
+| LLM Inference | Groq API |
+
+---
+
+## 🔮 Future Scope
+
+- Timestamp-based retrieval and direct navigation to relevant video segments.
+- Multi-video knowledge bases.
+- Persistent indexing and storage.
+- Video summarization and automatic chapter generation.
+- Optimized video indexing and reduced query-readiness latency.
+- Improved retrieval evaluation and response grounding.
+
+---
+
+## 👨‍💻 Author
+
+**Harshit**
+
+B.Tech — Information Technology
+
+[GitHub Profile](https://github.com/Harshit-0021)
+
+---
+
+**VideoMind — Don't rewatch it. Ask it.**
